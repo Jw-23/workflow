@@ -1,0 +1,5 @@
+{
+  "name": "FlowForge - Cloud Native Workflow Designer",
+  "description": "A powerful, client-side workflow automation tool. Design, execute, and save node-based logic flows locally. Features custom JavaScript execution, conditional logic, and network requests.",
+  "requestFramePermissions": []
+}
