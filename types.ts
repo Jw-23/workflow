@@ -1,3 +1,4 @@
+
 export enum NodeType {
   START = 'START',
   END = 'END',
@@ -16,6 +17,7 @@ export interface NodeData {
   method?: string; // For REQUEST
   headers?: string; // For REQUEST (JSON string)
   body?: string; // For REQUEST
+  useProxy?: boolean; // For REQUEST (Cloudflare Proxy)
   condition?: string; // For CONDITION (JS expression)
   delayMs?: number; // For DELAY
 }
@@ -27,11 +29,15 @@ export interface WorkflowNode {
   data: NodeData;
 }
 
+export type ConnectionType = 'default' | 'true' | 'false';
+export type IterationType = 'default' | 'map' | 'forEach';
+
 export interface Connection {
   id: string;
   source: string;
   target: string;
-  type?: 'default' | 'true' | 'false'; // For conditions
+  type?: ConnectionType; 
+  iteration?: IterationType;
 }
 
 export interface Workflow {
@@ -60,7 +66,7 @@ export interface WorkflowContextType {
   updateNode: (id: string, data: Partial<NodeData>) => void;
   removeNode: (id: string) => void;
   moveNode: (id: string, position: { x: number; y: number }) => void;
-  addEdge: (source: string, target: string, type?: 'default' | 'true' | 'false') => void;
+  addEdge: (source: string, target: string, type?: ConnectionType) => void;
   removeEdge: (id: string) => void;
   selectNode: (id: string | null) => void;
   setWorkflow: (workflow: Workflow) => void;

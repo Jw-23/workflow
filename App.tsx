@@ -1,18 +1,22 @@
+
 import React, { useState, useEffect } from 'react';
-import { WorkflowNode, Connection, NodeType, Language, Workflow, ExecutionLog } from './types';
+import { WorkflowNode, Connection, NodeType, Language, Workflow, ExecutionLog, NodeData } from './types';
 import { TEXT, INITIAL_CODE, NODE_COLORS } from './constants';
 import { generateId } from './utils/flowUtils';
 import { WorkflowEngine } from './services/engine';
 import { Canvas } from './components/flow/Canvas';
 import { PropertiesPanel } from './components/panels/PropertiesPanel';
 import { Button } from './components/ui/Button';
-import { Play, Save, RotateCcw, Box, Star } from 'lucide-react';
+import { Play, Save, RotateCcw, Box, Star, GitMerge } from 'lucide-react';
 
 const App = () => {
   const [nodes, setNodes] = useState<WorkflowNode[]>([]);
   const [edges, setEdges] = useState<Connection[]>([]);
   const [presets, setPresets] = useState<WorkflowNode[]>([]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
+  
   const [language, setLanguage] = useState<Language>('cn');
   const [logs, setLogs] = useState<ExecutionLog[]>([]);
   const [isRunning, setIsRunning] = useState(false);
@@ -48,6 +52,8 @@ const App = () => {
       setLogs(newLogs);
     } catch (e) {
       console.error(e);
+      // Ensure we see errors in logs even if crash
+      // engine.execute() should catch most, but top level safety:
     } finally {
       setIsRunning(false);
     }
@@ -60,31 +66,45 @@ const App = () => {
       position: { x: 100 + Math.random() * 50, y: 100 + Math.random() * 50 },
       data: presetData ? { ...presetData } : { 
         label: t.nodeTypes[type],
-        code: type === NodeType.SCRIPT ? INITIAL_CODE : undefined 
+        code: type === NodeType.SCRIPT ? INITIAL_CODE : undefined,
+        useProxy: type === NodeType.REQUEST ? true : undefined
       }
     };
     setNodes([...nodes, newNode]);
   };
 
-  const updateNode = (id: string, data: any) => {
+  const updateNode = (id: string, data: Partial<NodeData>) => {
     setNodes(nodes.map(n => n.id === id ? { ...n, data: { ...n.data, ...data } } : n));
+  };
+  
+  const updateEdge = (id: string, data: Partial<Connection>) => {
+    setEdges(edges.map(e => e.id === id ? { ...e, ...data } : e));
   };
 
   const deleteNode = () => {
-    if (!selectedId) return;
-    setNodes(nodes.filter(n => n.id !== selectedId));
-    setEdges(edges.filter(e => e.source !== selectedId && e.target !== selectedId));
-    setSelectedId(null);
+    if (!selectedNodeId) return;
+    setNodes(nodes.filter(n => n.id !== selectedNodeId));
+    setEdges(edges.filter(e => e.source !== selectedNodeId && e.target !== selectedNodeId));
+    setSelectedNodeId(null);
+  };
+
+  const deleteEdge = () => {
+    if (!selectedEdgeId) return;
+    setEdges(edges.filter(e => e.id !== selectedEdgeId));
+    setSelectedEdgeId(null);
   };
 
   const savePreset = () => {
-    const node = nodes.find(n => n.id === selectedId);
+    const node = nodes.find(n => n.id === selectedNodeId);
     if (!node) return;
-    const newPreset = { ...node, id: generateId(), position: {x:0, y:0} }; // clone
+    const newPreset = { ...node, id: generateId(), position: {x:0, y:0} };
     const updatedPresets = [...presets, newPreset];
     setPresets(updatedPresets);
     localStorage.setItem('flowforge_presets', JSON.stringify(updatedPresets));
   };
+
+  const selectedNode = selectedNodeId ? nodes.find(n => n.id === selectedNodeId) || null : null;
+  const selectedEdge = selectedEdgeId ? edges.find(e => e.id === selectedEdgeId) || null : null;
 
   return (
     <div className="flex flex-col h-screen w-screen bg-slate-900 text-slate-100 font-sans">
@@ -149,21 +169,29 @@ const App = () => {
 
         <div className="flex-1 relative">
           <Canvas 
-            nodes={nodes} edges={edges} selectedId={selectedId} logs={logs}
+            nodes={nodes} edges={edges} 
+            selectedId={selectedNodeId} 
+            selectedEdgeId={selectedEdgeId}
+            logs={logs}
             onMoveNode={(id, pos) => setNodes(nodes.map(n => n.id === id ? { ...n, position: pos } : n))}
-            onSelect={setSelectedId}
+            onSelectNode={setSelectedNodeId}
+            onSelectEdge={setSelectedEdgeId}
             onConnect={(src, tgt, type) => setEdges([...edges, { id: generateId(), source: src, target: tgt, type: type || 'default' }])}
-            onDeleteEdge={(id) => setEdges(edges.filter(e => e.id !== id))}
           />
         </div>
 
         <div className="w-72 bg-panel border-l border-border z-10 overflow-y-auto">
           <PropertiesPanel 
-            data={selectedId ? nodes.find(n => n.id === selectedId)?.data || null : null}
-            type={selectedId ? nodes.find(n => n.id === selectedId)?.type || null : null}
+            nodeId={selectedNodeId}
+            edgeId={selectedEdgeId}
+            nodeData={selectedNode?.data || null}
+            nodeType={selectedNode?.type || null}
+            edgeData={selectedEdge || null}
+            onChangeNode={(d) => selectedNodeId && updateNode(selectedNodeId, d)}
+            onChangeEdge={(d) => selectedEdgeId && updateEdge(selectedEdgeId, d)}
             lang={language}
-            onChange={(d) => selectedId && updateNode(selectedId, d)}
-            onDelete={deleteNode}
+            onDeleteNode={deleteNode}
+            onDeleteEdge={deleteEdge}
             onSavePreset={savePreset}
           />
         </div>

@@ -1,22 +1,70 @@
+
 import React from 'react';
-import { NodeData, NodeType, Language, WorkflowNode } from '../../types';
+import { NodeData, NodeType, Language, WorkflowNode, Connection, IterationType } from '../../types';
 import { TEXT } from '../../constants';
 import { CodeEditor } from '../ui/CodeEditor';
-import { Save } from 'lucide-react';
+import { Save, Trash2 } from 'lucide-react';
 
 interface Props {
-  data: NodeData | null;
-  type: NodeType | null;
-  onChange: (data: Partial<NodeData>) => void;
+  nodeId: string | null;
+  edgeId: string | null;
+  nodeData: NodeData | null;
+  nodeType: NodeType | null;
+  edgeData: Connection | null;
+  onChangeNode: (data: Partial<NodeData>) => void;
+  onChangeEdge: (data: Partial<Connection>) => void;
   lang: Language;
-  onDelete: () => void;
+  onDeleteNode: () => void;
+  onDeleteEdge: () => void;
   onSavePreset?: () => void;
 }
 
-export const PropertiesPanel: React.FC<Props> = ({ data, type, onChange, lang, onDelete, onSavePreset }) => {
+export const PropertiesPanel: React.FC<Props> = ({ 
+  nodeId, edgeId, nodeData, nodeType, edgeData, 
+  onChangeNode, onChangeEdge, lang, 
+  onDeleteNode, onDeleteEdge, onSavePreset 
+}) => {
   const t = TEXT[lang];
 
-  if (!data || !type) {
+  if (edgeId && edgeData) {
+    return (
+      <div className="p-4 space-y-4">
+        <h3 className="font-bold text-slate-200 border-b border-slate-700 pb-2 mb-4">
+          Connection Properties
+        </h3>
+        <div>
+           <label className="block text-xs text-slate-400 mb-1">{t.fields.iteration}</label>
+           <select 
+             value={edgeData.iteration || 'default'}
+             onChange={(e) => onChangeEdge({ iteration: e.target.value as IterationType })}
+             className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm text-slate-200"
+           >
+             <option value="default">{t.iterationTypes.default}</option>
+             <option value="map">{t.iterationTypes.map}</option>
+             <option value="forEach">{t.iterationTypes.forEach}</option>
+           </select>
+           <p className="text-[10px] text-slate-500 mt-2">
+             {edgeData.iteration === 'map' ? 
+               "Target node runs for EACH item in array. Returns Array." :
+               edgeData.iteration === 'forEach' ? 
+               "Target node runs for EACH item. Returns original Array." :
+               "Standard single execution flow."
+             }
+           </p>
+        </div>
+        <div className="pt-4 mt-4 border-t border-slate-700">
+          <button 
+            onClick={onDeleteEdge}
+            className="w-full flex items-center justify-center gap-2 bg-red-900/50 hover:bg-red-900 text-red-200 text-xs py-2 rounded transition-colors"
+          >
+            <Trash2 size={12} /> {t.delete}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!nodeData || !nodeType) {
     return (
       <div className="p-4 text-slate-500 text-sm text-center">
         {t.noNodeSelected}
@@ -28,8 +76,8 @@ export const PropertiesPanel: React.FC<Props> = ({ data, type, onChange, lang, o
     <div className="p-4 space-y-4">
       <h3 className="font-bold text-slate-200 border-b border-slate-700 pb-2 mb-4 flex justify-between items-center">
         {t.properties}
-        {onSavePreset && (type === NodeType.SCRIPT || type === NodeType.REQUEST) && (
-            <button onClick={onSavePreset} title={t.savePreset} className="text-slate-400 hover:text-white">
+        {onSavePreset && (nodeType === NodeType.SCRIPT || nodeType === NodeType.REQUEST) && (
+            <button onClick={onSavePreset} title={t.savePreset} className="text-slate-400 hover:text-white p-1 hover:bg-slate-700 rounded">
                 <Save size={14} />
             </button>
         )}
@@ -39,18 +87,18 @@ export const PropertiesPanel: React.FC<Props> = ({ data, type, onChange, lang, o
         <label className="block text-xs text-slate-400 mb-1">{t.fields.label}</label>
         <input
           type="text"
-          value={data.label}
-          onChange={(e) => onChange({ label: e.target.value })}
-          className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm focus:border-primary outline-none"
+          value={nodeData.label}
+          onChange={(e) => onChangeNode({ label: e.target.value })}
+          className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm focus:border-primary outline-none text-slate-200"
         />
       </div>
 
-      {type === NodeType.START && (
+      {nodeType === NodeType.START && (
         <div>
            <label className="block text-xs text-slate-400 mb-1">{t.fields.initValue}</label>
            <CodeEditor
-             value={data.initValue || ''}
-             onChange={(v) => onChange({ initValue: v })}
+             value={nodeData.initValue || ''}
+             onChange={(v) => onChangeNode({ initValue: v })}
              height="h-24"
              language="json"
              placeholder='{"key": "value"}'
@@ -59,24 +107,34 @@ export const PropertiesPanel: React.FC<Props> = ({ data, type, onChange, lang, o
         </div>
       )}
 
-      {type === NodeType.REQUEST && (
+      {nodeType === NodeType.REQUEST && (
         <>
+          <div className="flex items-center gap-2 mb-2">
+            <input 
+              type="checkbox" 
+              id="useProxy"
+              checked={nodeData.useProxy || false}
+              onChange={(e) => onChangeNode({ useProxy: e.target.checked })}
+              className="rounded bg-slate-900 border-slate-700"
+            />
+            <label htmlFor="useProxy" className="text-xs text-slate-300">{t.fields.useProxy}</label>
+          </div>
           <div>
             <label className="block text-xs text-slate-400 mb-1">{t.fields.url}</label>
             <input
               type="text"
-              value={data.url || ''}
-              onChange={(e) => onChange({ url: e.target.value })}
-              className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm focus:border-primary outline-none"
+              value={nodeData.url || ''}
+              onChange={(e) => onChangeNode({ url: e.target.value })}
+              className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm focus:border-primary outline-none text-slate-200"
               placeholder="https://api.example.com"
             />
           </div>
           <div>
             <label className="block text-xs text-slate-400 mb-1">{t.fields.method}</label>
             <select
-              value={data.method || 'GET'}
-              onChange={(e) => onChange({ method: e.target.value })}
-              className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm"
+              value={nodeData.method || 'GET'}
+              onChange={(e) => onChangeNode({ method: e.target.value })}
+              className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm text-slate-200"
             >
               <option>GET</option>
               <option>POST</option>
@@ -87,8 +145,8 @@ export const PropertiesPanel: React.FC<Props> = ({ data, type, onChange, lang, o
            <div>
             <label className="block text-xs text-slate-400 mb-1">{t.fields.headers}</label>
             <CodeEditor
-              value={data.headers || ''}
-              onChange={(v) => onChange({ headers: v })}
+              value={nodeData.headers || ''}
+              onChange={(v) => onChangeNode({ headers: v })}
               height="h-24"
               language="json"
               placeholder='{"Authorization": "Bearer..."}'
@@ -97,8 +155,8 @@ export const PropertiesPanel: React.FC<Props> = ({ data, type, onChange, lang, o
           <div>
             <label className="block text-xs text-slate-400 mb-1">{t.fields.body}</label>
             <CodeEditor
-              value={data.body || ''}
-              onChange={(v) => onChange({ body: v })}
+              value={nodeData.body || ''}
+              onChange={(v) => onChangeNode({ body: v })}
               height="h-32"
               language="json"
               placeholder="{}"
@@ -107,48 +165,48 @@ export const PropertiesPanel: React.FC<Props> = ({ data, type, onChange, lang, o
         </>
       )}
 
-      {type === NodeType.SCRIPT && (
+      {nodeType === NodeType.SCRIPT && (
         <div>
           <label className="block text-xs text-slate-400 mb-1">{t.fields.code}</label>
           <CodeEditor
-             value={data.code || ''}
-             onChange={(v) => onChange({ code: v })}
+             value={nodeData.code || ''}
+             onChange={(v) => onChangeNode({ code: v })}
              height="h-64"
           />
           <p className="text-[10px] text-slate-500 mt-1">{t.hints.code}</p>
         </div>
       )}
 
-      {type === NodeType.CONDITION && (
+      {nodeType === NodeType.CONDITION && (
         <div>
           <label className="block text-xs text-slate-400 mb-1">{t.fields.condition}</label>
           <CodeEditor
-             value={data.condition || ''}
-             onChange={(v) => onChange({ condition: v })}
+             value={nodeData.condition || ''}
+             onChange={(v) => onChangeNode({ condition: v })}
              height="h-24"
           />
           <p className="text-[10px] text-slate-500 mt-1">{t.hints.condition}</p>
         </div>
       )}
 
-      {type === NodeType.DELAY && (
+      {nodeType === NodeType.DELAY && (
         <div>
            <label className="block text-xs text-slate-400 mb-1">{t.fields.delay}</label>
            <input
               type="number"
-              value={data.delayMs || 1000}
-              onChange={(e) => onChange({ delayMs: parseInt(e.target.value) })}
-              className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm"
+              value={nodeData.delayMs || 1000}
+              onChange={(e) => onChangeNode({ delayMs: parseInt(e.target.value) })}
+              className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm text-slate-200"
             />
         </div>
       )}
 
       <div className="pt-4 mt-4 border-t border-slate-700">
         <button 
-          onClick={onDelete}
-          className="w-full bg-red-900/50 hover:bg-red-900 text-red-200 text-xs py-2 rounded transition-colors"
+          onClick={onDeleteNode}
+          className="w-full flex items-center justify-center gap-2 bg-red-900/50 hover:bg-red-900 text-red-200 text-xs py-2 rounded transition-colors"
         >
-          {t.delete}
+          <Trash2 size={12} /> {t.delete}
         </button>
       </div>
     </div>

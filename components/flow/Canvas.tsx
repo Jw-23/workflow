@@ -1,3 +1,4 @@
+
 import React, { useRef, useState } from 'react';
 import { WorkflowNode, Connection, NodeType, ExecutionLog } from '../../types';
 import { NodeComponent } from './NodeComponent';
@@ -7,15 +8,16 @@ interface Props {
   nodes: WorkflowNode[];
   edges: Connection[];
   selectedId: string | null;
+  selectedEdgeId: string | null;
   logs: ExecutionLog[];
   onMoveNode: (id: string, pos: { x: number; y: number }) => void;
-  onSelect: (id: string | null) => void;
+  onSelectNode: (id: string | null) => void;
+  onSelectEdge: (id: string | null) => void;
   onConnect: (source: string, target: string, type?: 'default' | 'true' | 'false') => void;
-  onDeleteEdge: (id: string) => void;
 }
 
 export const Canvas: React.FC<Props> = ({ 
-  nodes, edges, selectedId, logs, onMoveNode, onSelect, onConnect, onDeleteEdge 
+  nodes, edges, selectedId, selectedEdgeId, logs, onMoveNode, onSelectNode, onSelectEdge, onConnect
 }) => {
   const [draggingNode, setDraggingNode] = useState<string | null>(null);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
@@ -55,7 +57,8 @@ export const Canvas: React.FC<Props> = ({
 
   const startDrag = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    onSelect(id);
+    onSelectNode(id);
+    onSelectEdge(null);
     const node = nodes.find(n => n.id === id);
     if (node && canvasRef.current) {
       const rect = canvasRef.current.getBoundingClientRect();
@@ -81,13 +84,18 @@ export const Canvas: React.FC<Props> = ({
     setTempEdge(null);
   };
 
+  const handleCanvasClick = () => {
+    onSelectNode(null);
+    onSelectEdge(null);
+  };
+
   return (
     <div 
       ref={canvasRef}
       className="relative w-full h-full overflow-hidden bg-canvas cursor-grab active:cursor-grabbing"
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
-      onMouseDown={() => onSelect(null)}
+      onMouseDown={handleCanvasClick}
     >
       <div className="absolute inset-0 pointer-events-none opacity-20" 
            style={{ backgroundImage: 'radial-gradient(#475569 1px, transparent 1px)', backgroundSize: '20px 20px' }} 
@@ -101,16 +109,34 @@ export const Canvas: React.FC<Props> = ({
           
           const start = getPortPosition(source.position.x, source.position.y, 'output', source.type === NodeType.CONDITION, edge.type as any);
           const end = getPortPosition(target.position.x, target.position.y, 'input');
+          const isSelected = selectedEdgeId === edge.id;
+          const isMap = edge.iteration === 'map';
+          const isForEach = edge.iteration === 'forEach';
           
           return (
-            <g key={edge.id} onClick={() => onDeleteEdge(edge.id)} className="pointer-events-auto cursor-pointer group">
+            <g key={edge.id} 
+               onClick={(e) => { e.stopPropagation(); onSelectEdge(edge.id); onSelectNode(null); }} 
+               className="pointer-events-auto cursor-pointer group"
+            >
+              {/* Thick transparent path for easier clicking */}
               <path 
                 d={getBezierPath(start.x, start.y, end.x, end.y)} 
-                stroke={edge.type === 'true' ? '#22c55e' : edge.type === 'false' ? '#ef4444' : '#64748b'} 
-                strokeWidth="2" 
+                stroke="transparent" 
+                strokeWidth="15" 
+                fill="none" 
+              />
+              {/* Visible path */}
+              <path 
+                d={getBezierPath(start.x, start.y, end.x, end.y)} 
+                stroke={isSelected ? '#facc15' : (edge.type === 'true' ? '#22c55e' : edge.type === 'false' ? '#ef4444' : '#64748b')} 
+                strokeWidth={isSelected ? "3" : "2"} 
+                strokeDasharray={isMap ? "5,5" : isForEach ? "2,2" : ""}
                 fill="none" 
                 className="group-hover:stroke-white transition-colors"
               />
+              {isMap && (
+                 <text x={(start.x + end.x)/2} y={(start.y + end.y)/2 - 10} fill="#94a3b8" fontSize="10" textAnchor="middle">Map</text>
+              )}
             </g>
           );
         })}

@@ -1,3 +1,4 @@
+
 import { NodeType } from "./types";
 
 export const TEXT = {
@@ -12,7 +13,7 @@ export const TEXT = {
     logs: "Logs",
     delete: "Delete",
     savePreset: "Save as Preset",
-    noNodeSelected: "Select a node",
+    noNodeSelected: "Select a node or connection",
     nodeTypes: {
       [NodeType.START]: "Start",
       [NodeType.END]: "End",
@@ -29,14 +30,22 @@ export const TEXT = {
       method: "Method",
       headers: "Headers (JSON)",
       body: "Body (JSON)",
+      useProxy: "Use Cloudflare Proxy",
       code: "JavaScript Code",
       condition: "Condition (JS)",
-      delay: "Delay (ms)"
+      delay: "Delay (ms)",
+      iteration: "Flow Mode"
+    },
+    iterationTypes: {
+      default: "Direct Pass",
+      map: "Map (Array -> Item)",
+      forEach: "ForEach (No Return)"
     },
     hints: {
       code: "Vars: input, context. Return value -> next node.",
       condition: "Vars: input. Return boolean.",
-      initValue: "JSON object, string, or number"
+      initValue: "JSON object, string, or number",
+      proxy: "Enable to bypass CORS using /api/proxy"
     }
   },
   cn: {
@@ -48,9 +57,9 @@ export const TEXT = {
     nodes: "节点库",
     properties: "属性面板",
     logs: "日志",
-    delete: "删除节点",
+    delete: "删除",
     savePreset: "保存为自定义节点",
-    noNodeSelected: "请选择一个节点",
+    noNodeSelected: "请选择一个节点或连线",
     nodeTypes: {
       [NodeType.START]: "开始",
       [NodeType.END]: "结束",
@@ -67,14 +76,22 @@ export const TEXT = {
       method: "请求方法",
       headers: "请求头 (JSON)",
       body: "请求体 (JSON)",
+      useProxy: "使用 Cloudflare 代理",
       code: "JS 代码",
       condition: "条件表达式",
-      delay: "延时 (ms)"
+      delay: "延时 (ms)",
+      iteration: "流转模式"
+    },
+    iterationTypes: {
+      default: "直接传递",
+      map: "Map 迭代 (Array -> Item)",
+      forEach: "ForEach 遍历 (无返回)"
     },
     hints: {
       code: "变量: input, context。返回值传给下个节点。",
       condition: "变量: input。返回布尔值。",
-      initValue: "JSON 对象、字符串或数字"
+      initValue: "JSON 对象、字符串或数字",
+      proxy: "开启以通过 /api/proxy 绕过跨域限制"
     }
   }
 };
